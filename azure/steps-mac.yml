@@ -1,0 +1,24 @@
+steps:
+  - checkout: self
+    fetchDepth: 3
+    submodules: recursive
+  - task: Bash@3
+    inputs:
+      targetType: "inline"
+      script: |
+        brew info llvm;
+        brew info cmake;
+
+  - task: CMake@1
+    inputs:
+      cmakeArgs: .. -DBUILD_SHARED_LIBS=true -DCMAKE_BUILD_TYPE=$(configuration) -DCMAKE_INSTALL_PREFIX=${{ parameters.cmake_install_dir }}
+      workingDirectory: build
+  - task: CMake@1
+    inputs:
+      cmakeArgs: --build . --target install --config $(configuration)
+      workingDirectory: build
+  # - task: Bash@3
+  #   inputs:
+  #     targetType: "inline"
+  #     script: ctest --output-on-failure
+  #   timeoutInMinutes: 1

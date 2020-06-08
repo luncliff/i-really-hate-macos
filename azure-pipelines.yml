@@ -1,0 +1,11 @@
+jobs:
+  - job: mac_cmake_appleclang11_debug
+    pool:
+      vmImage: "macos-latest"
+    variables:
+      configuration: Debug
+    steps:
+      - template: azure/steps-mac.yml
+        parameters:
+          cmake_work_dir: "build"
+          cmake_install_dir: "../install"

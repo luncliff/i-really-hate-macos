@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.14</string>
+    <!-- bundle info -->
+    <key>CFBundleDevelopmentRegion</key>
+    <string>ko_KR</string>
+    <key>CFBundleExecutable</key>
+    <string>camera_app</string>
+    <key>CFBundleIdentifier</key>
+    <string>dev.luncliff.camera_app</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>luncliff-camera_app</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <!-- behavior -->
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+    <key>NSSupportsAutomaticTermination</key>
+    <true/>
+    <key>NSSupportsSuddenTermination</key>
+    <false/>
+    <!-- permissions -->
+    <key>NSDesktopFolderUsageDescription</key>
+    <string>need a perm to access desktop</string>
+    <key>NSCameraUsageDescription</key>
+    <string>need a perm to use camera</string>
+</dict>
+</plist>

@@ -11,7 +11,7 @@ steps:
 
   - task: CMake@1
     inputs:
-      cmakeArgs: .. -DBUILD_SHARED_LIBS=true -DCMAKE_BUILD_TYPE=$(configuration) -DCMAKE_INSTALL_PREFIX=${{ parameters.cmake_install_dir }}
+      cmakeArgs: .. -G Xcode -DBUILD_SHARED_LIBS=true -DCMAKE_BUILD_TYPE=$(configuration) -DCMAKE_INSTALL_PREFIX=${{ parameters.cmake_install_dir }}
       workingDirectory: build
   - task: CMake@1
     inputs:

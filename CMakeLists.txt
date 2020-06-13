@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(camera_macosx LANGUAGES CXX OBJCXX)
+project(hate_this LANGUAGES CXX OBJCXX)
 
 if(NOT APPLE)
     message(FATAL_ERROR "expect APPLE platform")
@@ -46,44 +46,46 @@ ExternalProject_Add(external_libpng
     INSTALL_COMMAND     cmake --build . --target install
 )
 
-add_executable(camera_app
+add_executable(damn_app
     main.mm
     interface.h
     native.cpp
     camera.mm
     metal.mm
+    opengl.mm
 )
-add_dependencies(camera_app     external_zlib 
+add_dependencies(damn_app     external_zlib 
                                 external_libpng
 )
 
-set_target_properties(camera_app
+set_target_properties(damn_app
 PROPERTIES
     OBJCXX_STANDARD 17
     MACOSX_BUNDLE   true
     MACOSX_BUNDLE_INFO_PLIST    ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist
 )
 
-target_include_directories(camera_app
+target_include_directories(damn_app
 PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_INSTALL_PREFIX}/include
 )
 
-target_link_directories(camera_app
+target_link_directories(damn_app
 PRIVATE
     ${CMAKE_INSTALL_PREFIX}/lib
 )
 
-target_link_libraries(camera_app
+target_link_libraries(damn_app
 PRIVATE
     ${CMAKE_DL_LIBS}
     "-framework AppKit"
     "-framework CoreVideo" "-framework AVFoundation"
     "-framework MetalKit" "-framework Metal"
+    "-framework OpenGL" "-framework CoreMedia"
 )
 
-target_compile_options(camera_app
+target_compile_options(damn_app
 PRIVATE
     -Wall -Wextra
     -std=c++2a -stdlib=libc++
@@ -91,6 +93,6 @@ PRIVATE
 
 include(BundleUtilities)
 
-install(TARGETS camera_app
+install(TARGETS damn_app
         BUNDLE DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )

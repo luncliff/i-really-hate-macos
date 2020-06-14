@@ -22,12 +22,8 @@
     count = 0;
     return self;
 }
-- (void)dealloc {
-    if (display) {
-        CVDisplayLinkStop(display);
-        CVDisplayLinkRelease(display);
-    }
-    [super dealloc];
+- (CVDisplayLinkRef)getDisplay {
+    return display;
 }
 /// @note the callback won't be invoked in the main thread
 static CVReturn callback(CVDisplayLinkRef display, const CVTimeStamp* now,
@@ -37,12 +33,13 @@ static CVReturn callback(CVDisplayLinkRef display, const CVTimeStamp* now,
     auto context = [view openGLContext];
     [context makeCurrentContext];
     [context lock];
-    const GLenum ec = [view render];
-    if (ec)
-        NSLog(@"gl error: %5u(%4x)", ec, ec);
-    glFlush();
+    {
+        if (auto ec = [view render:CGLGetCurrentContext()])
+            NSLog(@"gl error: %5u(%4x)", ec, ec);
+        glFlush();
+    }
     [context unlock];
-    return ec == GL_NO_ERROR ? kCVReturnSuccess : kCVReturnError;
+    return kCVReturnSuccess;
 }
 - (void)prepareOpenGL {
     [super prepareOpenGL];
@@ -54,14 +51,40 @@ static CVReturn callback(CVDisplayLinkRef display, const CVTimeStamp* now,
 }
 - (void)reshape { // update viewport
     [super reshape];
-    const auto frame = [self frame];
-    glViewport(0, 0, frame.size.width, frame.size.height);
+    auto context = [self openGLContext];
+    [context lock];
+    {
+        const auto frame = [self frame];
+        glViewport(0, 0, frame.size.width, frame.size.height);
+        if (auto ec = glGetError())
+            NSLog(@"gl error: %5u(%4x)", ec, ec);
+    }
+    [context unlock];
 }
-- (GLenum)render {
+- (GLenum)render:(void*)context {
     count = (count + 1) % 256;
     glClearColor(0, static_cast<float>(count) / 256, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     return glGetError();
+}
+@end
+@interface CVDO : NSObject <NSWindowDelegate>
+@property(readonly) GLV* view;
+@end
+@implementation CVDO
+- (id)init:(GLV*)view {
+    if (self = [super init]) {
+        _view = view;
+    }
+    return self;
+}
+- (void)windowWillClose:(NSNotification*)notification {
+    NSWindow* window = notification.object;
+    NSLog(@"window close: %@", window.title);
+    if (auto display = [_view getDisplay]) {
+        CVDisplayLinkStop(display);
+        CVDisplayLinkRelease(display);
+    }
 }
 @end
 
@@ -69,6 +92,7 @@ static CVReturn callback(CVDisplayLinkRef display, const CVTimeStamp* now,
 NSWindow* makeWindowForOpenGL(AD* appd, NSString* title) {
     const auto rect = NSMakeRect(0, 0, 720, 720);
     auto view = [[GLV alloc] initWithFrame:rect];
-    auto window = [appd makeWindow:nil title:title contentView:view];
+    auto delegate = [[CVDO alloc] init:view];
+    auto window = [appd makeWindow:delegate title:title contentView:view];
     return window;
 }

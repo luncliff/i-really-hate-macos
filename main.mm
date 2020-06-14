@@ -53,6 +53,10 @@ int main(int argc, char* argv[]) {
                 return __LINE__;
             NSLog(@"created window: %@", window.title);
         }
+        {
+            if (auto ec = window2(delegate))
+                return ec;
+        }
         return [NSApp run], 0;
     }
 }

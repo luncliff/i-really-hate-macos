@@ -29,8 +29,11 @@ bool acquireCameraPermission() {
 AVCaptureDevice* acquireCameraDevice() {
     for (AVCaptureDevice* camera in
          [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo]) {
+        NSLog(@"camera: %@", [camera localizedName]);
+        for (auto fmt : [camera formats])
+            NSLog(@"format: %@", fmt);
         const auto pos = [camera position];
-        NSLog(@"camera position: %ld", pos);
+        NSLog(@"position: %ld", pos);
         switch (pos) {
         case AVCaptureDevicePositionBack:
             continue;
@@ -60,20 +63,35 @@ AVCaptureDevice* acquireCameraDevice() {
 - (void)captureOutput:(AVCaptureOutput*)output
     didOutputSampleBuffer:(CMSampleBufferRef)buffer
            fromConnection:(AVCaptureConnection*)connection {
-    NSLog(@"buffer delegate: %s", "output");
+    // NSLog(@"buffer delegate: %s", "output");
     CVPixelBufferRef pb = CMSampleBufferGetImageBuffer(buffer);
-    CVPixelBufferLockBaseAddress(pb, 0);
-    const void* ptr = CVPixelBufferGetBaseAddress(pb);
+    CVPixelBufferRetain(pb);
     const size_t bpr = CVPixelBufferGetBytesPerRow(pb);
     const size_t width = CVPixelBufferGetWidth(pb);
     const size_t height = CVPixelBufferGetHeight(pb);
-    CVPixelBufferUnlockBaseAddress(pb, 0);
+    const size_t data_size = CVPixelBufferGetDataSize(pb);
+    // CVPixelBufferLockBaseAddress(pb, 0);
+    // const void* ptr = CVPixelBufferGetBaseAddress(pb);
+    // CVPixelBufferUnlockBaseAddress(pb, 0);
+    const auto format = CVPixelBufferGetPixelFormatType(pb);
+    switch (format) {
+    case kCVPixelFormatType_32BGRA:                       // 'BGRA'
+    case kCVPixelFormatType_422YpCbCr8:                   // '2yuv'
+    case kCVPixelFormatType_422YpCbCr8_yuvs:              // 'yuvs'
+    case kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange: // '420v'
+    default:
+        break;
+    }
+    CVPixelBufferRelease(pb);
 }
 - (void)captureOutput:(AVCaptureOutput*)output
     didDropSampleBuffer:(CMSampleBufferRef)buffer
          fromConnection:(AVCaptureConnection*)connection {
-    NSLog(@"buffer delegate: %s", "drop");
+    CVPixelBufferRef pb = CMSampleBufferGetImageBuffer(buffer);
+    if (pb != nullptr)
+        NSLog(@"buffer delegate: %s", "drop");
 }
+
 - (void)windowWillClose:(NSNotification*)notification {
     NSWindow* window = notification.object;
     NSLog(@"window close: %@", window.title);
@@ -102,6 +120,10 @@ NSError* configure(AVCaptureSession* session, AVCaptureDevice* device,
                                             DISPATCH_QUEUE_PRIORITY_LOW, 0)];
         [session addOutput:output];
         output.videoSettings = @{
+            // kCVPixelFormatType_32BGRA 'BGRA'
+            // kCVPixelFormatType_422YpCbCr8 '2yuv'
+            // kCVPixelFormatType_422YpCbCr8_yuvs 'yuvs'
+            // kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange '420v'
             (id)kCVPixelBufferPixelFormatTypeKey : @(kCVPixelFormatType_32BGRA)
         };
     }

@@ -13,6 +13,7 @@
             contentView:(NSView*)view;
 @end
 
+NSWindow* makeWindowForOpenGL(AD* appd, NSString* title);
 NSWindow* makeWindowForMtkView(AD* appd, NSString* title, void* context);
 NSWindow* makeWindowForAVCaptureSession(AD* appd, NSString* title,
                                         AVCaptureSession* session);

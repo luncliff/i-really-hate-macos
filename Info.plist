@@ -8,13 +8,13 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>ko_KR</string>
     <key>CFBundleExecutable</key>
-    <string>camera_app</string>
+    <string>damn_app</string>
     <key>CFBundleIdentifier</key>
-    <string>dev.luncliff.camera_app</string>
+    <string>dev.luncliff.damn_app</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>luncliff-camera_app</string>
+    <string>luncliff-damn_app</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <!-- behavior -->

@@ -54,8 +54,8 @@ add_executable(damn_app
     metal.mm
     opengl.mm
 )
-add_dependencies(damn_app     external_zlib 
-                                external_libpng
+add_dependencies(damn_app   external_zlib 
+                            external_libpng
 )
 
 set_target_properties(damn_app
@@ -89,6 +89,11 @@ target_compile_options(damn_app
 PRIVATE
     -Wall -Wextra
     -std=c++2a -stdlib=libc++
+)
+
+target_compile_definitions(damn_app
+PRIVATE
+    GL_SILENCE_DEPRECATION
 )
 
 include(BundleUtilities)

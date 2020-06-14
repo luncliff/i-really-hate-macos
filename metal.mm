@@ -2,8 +2,15 @@
 
 @interface MVD : NSObject <MTKViewDelegate, NSWindowDelegate>
 @property(assign) NSTimer* timer; /// @see http://blog.weirdx.io/post/877
+@property(readonly) id<MTLDevice> device;
 @end
 @implementation MVD
+- (id)init:(id<MTLDevice>)device {
+    if (self = [super init]) {
+        _device = device;
+    }
+    return self;
+}
 - (void)mtkView:(MTKView*)view drawableSizeWillChange:(CGSize)size {
     NSLog(@"view: %@", [view className]);
     if (NSWindow* window = [view window]) {
@@ -25,19 +32,18 @@
     NSLog(@"window will resize: w %.2f h %.2f", size.width, size.height);
     return size;
 }
+/// @todo consider using `NSDictionary` for context
 - (void)schedule:(void*)context {
-    const UInt16 checkInSec = 10; // check 10 times in 1 second.
-    /// @todo consider using `NSDictionary`
-    _timer = [NSTimer scheduledTimerWithTimeInterval:(1.0 / checkInSec)
-                                             target:self
-                                           selector:@selector(updateWithTimer:)
-                                           userInfo:self
-                                            repeats:YES];
+    const auto count = 2u; // check 2 times in 1 second.
+    _timer = [NSTimer scheduledTimerWithTimeInterval:(1.0f / count)
+                                              target:self
+                                            selector:@selector(updateWithTimer:)
+                                            userInfo:self
+                                             repeats:YES];
     NSLog(@"window delegate: scheduled");
 }
 - (void)updateWithTimer:(NSTimer*)_ {
-
-    // NSLog(@"window delegate: updated");
+    NSLog(@"MTKViewDelegate delegate: updated");
 }
 @end
 
@@ -48,7 +54,7 @@ NSWindow* makeWindowForMtkView(AD* appd, NSString* title, void* context) {
         NSLog(@"Metal is not supported on this machine");
         return nil;
     }
-    auto renderer = [[MVD alloc] init];
+    auto renderer = [[MVD alloc] init:device];
     // fixed size for convenience
     const auto rect = NSMakeRect(0, 0, 720, 720);
     auto view = [[MTKView alloc] initWithFrame:rect device:device];

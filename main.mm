@@ -47,9 +47,12 @@ int main(int argc, char* argv[]) {
         NSApp = [NSApplication sharedApplication];
         auto delegate = [[AD alloc] init];
         [NSApp setDelegate:delegate];
-
-        if (auto ec = window1(delegate))
-            return ec;
+        {
+            auto window = makeWindowForOpenGL(delegate, @"OpenGL");
+            if (window == nil)
+                return __LINE__;
+            NSLog(@"created window: %@", window.title);
+        }
         return [NSApp run], 0;
     }
 }

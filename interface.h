@@ -4,8 +4,12 @@
  */
 #if defined(__OBJC__)
 #import <AVFoundation/AVFoundation.h>
-#import <AppKit/AppKit.h>
 #import <MetalKit/MetalKit.h>
+#if defined(TARGET_OS_MAC)
+#import <AppKit/AppKit.h>
+#else
+#error "currently TARGET_OS_MAC only"
+#endif
 
 @interface AD : NSObject <NSApplicationDelegate>
 - (NSWindow*)makeWindow:(id<NSWindowDelegate>)delegate
@@ -21,6 +25,6 @@ NSWindow* makeWindowForAVCaptureSession(AD* appd, NSString* title,
 AVCaptureDevice* acquireCameraDevice();
 bool acquireCameraPermission();
 #endif
-#include <filesystem>
 
+#include <filesystem>
 namespace fs = std::filesystem;

@@ -1,7 +1,7 @@
 #include "interface.h"
 
-#include <png.h>
-#include <zlib.h>
+// #include <png.h>
+// #include <zlib.h>
 
 fs::path workspace = fs::current_path();
 

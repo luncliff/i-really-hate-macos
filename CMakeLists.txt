@@ -10,42 +10,6 @@ if(NOT DEFINED CMAKE_INSTALL_PREFIX)
     message(FATAL_ERROR "requires CMAKE_INSTALL_PREFIX")
 endif()
 
-include(ExternalProject)
-ExternalProject_Add(external_zlib
-    TMP_DIR             ${CMAKE_BINARY_DIR}/download
-    DOWNLOAD_DIR        ${CMAKE_CURRENT_SOURCE_DIR}/externals
-    SOURCE_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/externals/zlib
-    GIT_REPOSITORY      https://github.com/madler/zlib.git
-    GIT_TAG             v1.2.11
-    GIT_SHALLOW         true
-    BUILD_IN_SOURCE     true
-    PATCH_COMMAND       git status
-    CONFIGURE_COMMAND   cmake . -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
-                                -DCMAKE_BUILD_TYPE=Debug
-    BUILD_COMMAND       cmake --build . 
-    BUILD_ALWAYS        true
-    INSTALL_COMMAND     cmake --build . --target install
-)
-ExternalProject_Add(external_libpng
-    DEPENDS     external_zlib
-    TMP_DIR             ${CMAKE_BINARY_DIR}/download
-    DOWNLOAD_DIR        ${CMAKE_CURRENT_SOURCE_DIR}/externals
-    SOURCE_DIR          ${CMAKE_CURRENT_SOURCE_DIR}/externals/libpng
-    GIT_REPOSITORY      https://github.com/glennrp/libpng.git
-    GIT_TAG             v1.6.37
-    GIT_SHALLOW         true
-    BUILD_IN_SOURCE     true
-    PATCH_COMMAND       git status
-    CONFIGURE_COMMAND   cmake . -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
-                                -DCMAKE_BUILD_TYPE=Debug
-                                -DSKIP_INSTALL_PROGRAMS=ON
-                                -DSKIP_INSTALL_EXECUTABLES=ON
-                                -DSKIP_INSTALL_FILES=ON                        
-    BUILD_COMMAND       cmake --build . 
-    BUILD_ALWAYS        true
-    INSTALL_COMMAND     cmake --build . --target install
-)
-
 add_executable(damn_app
     main.mm
     interface.h
@@ -54,15 +18,12 @@ add_executable(damn_app
     metal.mm
     opengl.mm
 )
-add_dependencies(damn_app   external_zlib 
-                            external_libpng
-)
 
 set_target_properties(damn_app
 PROPERTIES
     OBJCXX_STANDARD 17
     MACOSX_BUNDLE   true
-    MACOSX_BUNDLE_INFO_PLIST    ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist
+    # XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "-"
 )
 
 target_include_directories(damn_app
@@ -79,11 +40,28 @@ PRIVATE
 target_link_libraries(damn_app
 PRIVATE
     ${CMAKE_DL_LIBS}
-    "-framework AppKit"
-    "-framework CoreVideo" "-framework AVFoundation"
+    "-framework CoreMedia" "-framework CoreVideo" "-framework AVFoundation"
     "-framework MetalKit" "-framework Metal"
-    "-framework OpenGL" "-framework CoreMedia"
 )
+if(CMAKE_SYSTEM MATCHES iOS)
+    set_target_properties(damn_app
+    PROPERTIES
+        MACOSX_BUNDLE_INFO_PLIST    ${CMAKE_CURRENT_SOURCE_DIR}/Info-iphone.plist
+    )
+    target_link_libraries(damn_app
+    PRIVATE
+        "-framework UIKit"
+    )
+else()
+    set_target_properties(damn_app
+    PROPERTIES
+        MACOSX_BUNDLE_INFO_PLIST    ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist
+    )
+    target_link_libraries(damn_app
+    PRIVATE
+        "-framework AppKit" "-framework OpenGL"
+    )
+endif()
 
 target_compile_options(damn_app
 PRIVATE
@@ -100,4 +78,58 @@ include(BundleUtilities)
 
 install(TARGETS damn_app
         BUNDLE DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+)
+
+if(NOT CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+    return()
+elseif(NOT BUILD_TESTING)
+    return()
+endif()
+enable_testing()
+find_package(XCTest REQUIRED)
+
+list(APPEND src
+    native_test.mm
+    # ...
+)
+source_group(test_case
+FILES
+    ${src}
+)
+
+# xctest_add_bundle
+xctest_add_bundle(test_suite
+    damn_app
+    Info.plist
+    ${src}
+)
+
+set_target_properties(test_suite
+PROPERTIES
+    OBJCXX_STANDARD 17
+    MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist
+    # XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "-"
+)
+
+target_include_directories(test_suite
+PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_INSTALL_PREFIX}/include
+)
+
+target_link_directories(test_suite
+PRIVATE
+    ${CMAKE_INSTALL_PREFIX}/lib
+)
+
+target_link_libraries(test_suite
+PRIVATE
+    ${CMAKE_DL_LIBS}
+    "-framework CoreMedia"
+)
+
+target_compile_options(test_suite
+PRIVATE
+    -Wall -Wextra
+    -std=c++2a -stdlib=libc++
 )

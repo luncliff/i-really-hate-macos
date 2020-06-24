@@ -26,7 +26,9 @@
         <false />
         <!-- permissions -->
         <key>NSDesktopFolderUsageDescription</key>
-        <string>need a perm to access desktop</string>
+        <string>need a perm to access user's folder: Desktop</string>
+        <key>NSDownloadsFolderUsageDescription</key>
+        <string>need a perm to access user's folder: Downloads</string>
         <key>NSCameraUsageDescription</key>
         <string>need a perm to use camera</string>
     </dict>

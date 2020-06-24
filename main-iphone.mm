@@ -25,6 +25,10 @@
     _window.rootViewController = [[VC alloc] init];
     _window.backgroundColor = UIColor.blueColor;
     [_window makeKeyAndVisible];
+    auto view = [[UIView alloc] initWithFrame:[_window frame]];
+    view.backgroundColor = UIColor.greenColor;
+    view.alpha = 0.500f;
+    [_window insertSubview:view atIndex:0];
     return YES;
 }
 - (void)applicationWillResignActive:(UIApplication*)application {
@@ -38,10 +42,6 @@
 }
 - (void)applicationDidBecomeActive:(UIApplication*)application {
     NSLog(@"applicationDidBecomeActive");
-    auto view = [[UIView alloc] initWithFrame:[_window frame]];
-    view.backgroundColor = UIColor.greenColor;
-    view.alpha = 0.500f;
-    [_window insertSubview:view atIndex:0];
 }
 - (void)applicationWillTerminate:(UIApplication*)application {
     NSLog(@"applicationWillTerminate");

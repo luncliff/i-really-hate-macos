@@ -25,6 +25,7 @@
 - (CVDisplayLinkRef)getDisplay {
     return display;
 }
+
 /// @note the callback won't be invoked in the main thread
 static CVReturn callback(CVDisplayLinkRef display, const CVTimeStamp* now,
                          const CVTimeStamp* outputTime, CVOptionFlags iflags,
@@ -33,16 +34,17 @@ static CVReturn callback(CVDisplayLinkRef display, const CVTimeStamp* now,
     auto context = [view openGLContext];
     [context makeCurrentContext];
     [context lock];
-    {
-        if (auto ec = [view render:CGLGetCurrentContext()])
-            NSLog(@"gl error: %5u(%4x)", ec, ec);
-        glFlush();
-    }
+    if (auto ec = [view render:[context CGLContextObj]])
+        NSLog(@"gl error: %5u(%4x)", ec, ec);
+    glFlush();
     [context unlock];
     return kCVReturnSuccess;
 }
 - (void)prepareOpenGL {
+    NSLog(@"prepareOpenGL");
     [super prepareOpenGL];
+    auto const context = [[self openGLContext] CGLContextObj];
+    CGLDisable(context, kCGLCEMPEngine); // disable multi thread
     glClearColor(0, 0, 0, 0);
     // the view will be refreshed with CVDisplay
     CVDisplayLinkCreateWithActiveCGDisplays(&display);
@@ -50,6 +52,7 @@ static CVReturn callback(CVDisplayLinkRef display, const CVTimeStamp* now,
     CVDisplayLinkStart(display);
 }
 - (void)reshape { // update viewport
+    NSLog(@"reshape");
     [super reshape];
     auto context = [self openGLContext];
     [context lock];
@@ -61,7 +64,7 @@ static CVReturn callback(CVDisplayLinkRef display, const CVTimeStamp* now,
     }
     [context unlock];
 }
-- (GLenum)render:(void*)context {
+- (GLenum)render:(CGLContextObj)context {
     count = (count + 1) % 256;
     glClearColor(0, static_cast<float>(count) / 256, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

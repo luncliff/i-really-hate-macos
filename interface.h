@@ -11,20 +11,40 @@
 #error "currently TARGET_OS_MAC only"
 #endif
 
-@interface AD : NSObject <NSApplicationDelegate>
+@protocol OpenGLRenderer
+- (GLenum)render:(NSOpenGLContext*)context currentView:(NSOpenGLView*)view;
+@end
+
+@interface AD : NSObject <NSApplicationDelegate,                        //
+                          AVCaptureVideoDataOutputSampleBufferDelegate, //
+                          OpenGLRenderer> {
+  @private
+    GLuint tex;
+}
+@property(atomic, readwrite) CVPixelBufferRef pixelBuffer;
+
 - (NSWindow*)makeWindow:(id<NSWindowDelegate>)delegate
                   title:(NSString*)txt
             contentView:(NSView*)view;
 @end
 
 NSWindow* makeWindowForOpenGL(AD* appd, NSString* title);
-NSWindow* makeWindowForMtkView(AD* appd, NSString* title, void* context);
-NSWindow* makeWindowForAVCaptureSession(AD* appd, NSString* title,
-                                        AVCaptureSession* session);
+NSWindow* makeWindowForOpenGL(AD* appd, NSString* title,
+                              id<OpenGLRenderer> renderer);
+
+NSWindow* makeWindowForMtkView(AD* appd, NSString* title);
 
 AVCaptureDevice* acquireCameraDevice();
 bool acquireCameraPermission();
+NSWindow* makeWindowForAVCaptureDevice(AD* appd, NSString* title,
+                                       AVCaptureDevice* device);
+NSWindow* makeWindowForAVCaptureDevice(
+    AD* appd, NSString* title, AVCaptureDevice* device,
+    id<AVCaptureVideoDataOutputSampleBufferDelegate> delegate);
+
 #endif
 
 #include <filesystem>
 namespace fs = std::filesystem;
+
+uint32_t init(int argc, char* argv[]);

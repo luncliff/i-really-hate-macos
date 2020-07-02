@@ -33,7 +33,7 @@
     return size;
 }
 /// @todo consider using `NSDictionary` for context
-- (void)schedule:(void*)context {
+- (void)schedule {
     const auto count = 2u; // check 2 times in 1 second.
     _timer = [NSTimer scheduledTimerWithTimeInterval:(1.0f / count)
                                               target:self
@@ -47,7 +47,7 @@
 }
 @end
 
-NSWindow* makeWindowForMtkView(AD* appd, NSString* title, void* context) {
+NSWindow* makeWindowForMtkView(AD* appd, NSString* title) {
     // will run with Metal
     auto const device = MTLCreateSystemDefaultDevice();
     if (device == nil) {
@@ -62,6 +62,6 @@ NSWindow* makeWindowForMtkView(AD* appd, NSString* title, void* context) {
     [view setDelegate:renderer];
     // view is ready. spawn a new window and assign context
     auto window = [appd makeWindow:renderer title:title contentView:view];
-    [renderer schedule:context];
+    [renderer schedule];
     return window;
 }

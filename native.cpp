@@ -5,7 +5,7 @@
 
 fs::path workspace = fs::current_path();
 
-int init(int argc, char* argv[]) {
+uint32_t init(int argc, char* argv[]) {
     if (argc >= 2)
         workspace = fs::path{argv[1]};
 

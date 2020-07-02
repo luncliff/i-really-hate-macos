@@ -11,14 +11,14 @@ bool acquireCameraPermission() {
         return false;
     }
     // request permission and wait for it
-    auto group = dispatch_group_create();
-    dispatch_group_enter(group);
+    auto latch = dispatch_group_create();
+    dispatch_group_enter(latch);
     [AVCaptureDevice requestAccessForMediaType:mtype
-                             completionHandler:[group](BOOL granted) {
+                             completionHandler:[latch](BOOL granted) {
                                  NSLog(@"camera permission: %i", granted);
-                                 dispatch_group_leave(group);
+                                 dispatch_group_leave(latch);
                              }];
-    dispatch_group_wait(group,
+    dispatch_group_wait(latch,
                         dispatch_time(DISPATCH_TIME_NOW, //
                                       static_cast<int64_t>(5 * NSEC_PER_SEC)));
     return [AVCaptureDevice authorizationStatusForMediaType:mtype] ==
@@ -29,20 +29,20 @@ bool acquireCameraPermission() {
 AVCaptureDevice* acquireCameraDevice() {
     for (AVCaptureDevice* camera in
          [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo]) {
-        NSLog(@"camera: %@", [camera localizedName]);
-        for (auto fmt : [camera formats])
-            NSLog(@"format: %@", fmt);
-        const auto pos = [camera position];
-        NSLog(@"position: %ld", pos);
-        switch (pos) {
+        const auto name = [camera localizedName];
+        NSLog(@"camera: %@", name);
+        switch (const auto pos = [camera position]) {
         case AVCaptureDevicePositionBack:
-            continue;
         case AVCaptureDevicePositionFront:
         case AVCaptureDevicePositionUnspecified:
-            return camera;
+            NSLog(@"position: %@", pos);
         }
+        for (auto fmt : [camera formats])
+            NSLog(@"format: %@", fmt);
+
+        return camera;
     }
-    return nil;
+    return nullptr;
 }
 
 @interface SBD : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate, //
@@ -56,16 +56,8 @@ AVCaptureDevice* acquireCameraDevice() {
     }
     return self;
 }
-- (void)start {
-    NSLog(@"capture session: start running");
-    [_session startRunning];
-}
-- (void)captureOutput:(AVCaptureOutput*)output
-    didOutputSampleBuffer:(CMSampleBufferRef)buffer
-           fromConnection:(AVCaptureConnection*)connection {
-    // NSLog(@"buffer delegate: %s", "output");
-    CVPixelBufferRef pb = CMSampleBufferGetImageBuffer(buffer);
-    CVPixelBufferRetain(pb);
+
+- (void)consume:(CVPixelBufferRef)pb {
     const size_t bpr = CVPixelBufferGetBytesPerRow(pb);
     const size_t width = CVPixelBufferGetWidth(pb);
     const size_t height = CVPixelBufferGetHeight(pb);
@@ -75,23 +67,29 @@ AVCaptureDevice* acquireCameraDevice() {
     // CVPixelBufferUnlockBaseAddress(pb, 0);
     const auto format = CVPixelBufferGetPixelFormatType(pb);
     switch (format) {
-    case kCVPixelFormatType_32BGRA:                       // 'BGRA'
-    case kCVPixelFormatType_422YpCbCr8:                   // '2yuv'
-    case kCVPixelFormatType_422YpCbCr8_yuvs:              // 'yuvs'
-    case kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange: // '420v'
+    case kCVPixelFormatType_422YpCbCr8: // '2yuv'
+        break;
+    case kCVPixelFormatType_422YpCbCr8_yuvs: // 'yuvs'
+        break;
+    case kCVPixelFormatType_32BGRA: // 'BGRA'
+        break;
     default:
         break;
     }
+}
+- (void)captureOutput:(AVCaptureOutput*)output
+    didOutputSampleBuffer:(CMSampleBufferRef)buffer
+           fromConnection:(AVCaptureConnection*)connection {
+    CVPixelBufferRef pb = CMSampleBufferGetImageBuffer(buffer);
+    CVPixelBufferRetain(pb);
+    [self consume:pb];
     CVPixelBufferRelease(pb);
 }
 - (void)captureOutput:(AVCaptureOutput*)output
     didDropSampleBuffer:(CMSampleBufferRef)buffer
          fromConnection:(AVCaptureConnection*)connection {
-    CVPixelBufferRef pb = CMSampleBufferGetImageBuffer(buffer);
-    if (pb != nullptr)
-        NSLog(@"buffer delegate: %s", "drop");
+    NSLog(@"buffer delegate: %s", "drop");
 }
-
 - (void)windowWillClose:(NSNotification*)notification {
     NSWindow* window = notification.object;
     NSLog(@"window close: %@", window.title);
@@ -105,48 +103,40 @@ NSError* configure(AVCaptureSession* session, AVCaptureDevice* device,
                    id<AVCaptureVideoDataOutputSampleBufferDelegate> delegate,
                    NSRect& rect) {
     NSError* err{};
+    auto input = [[AVCaptureDeviceInput alloc] initWithDevice:device
+                                                        error:&err];
+    if (err)
+        return err;
     [session beginConfiguration];
-    {
-        auto input = [[AVCaptureDeviceInput alloc] initWithDevice:device
-                                                            error:&err];
-        if (err)
-            goto onError;
-        [session addInput:input];
-    }
-    {
-        auto output = [[AVCaptureVideoDataOutput alloc] init];
-        [output setSampleBufferDelegate:delegate //
-                                  queue:dispatch_get_global_queue(
-                                            DISPATCH_QUEUE_PRIORITY_LOW, 0)];
-        [session addOutput:output];
-        output.videoSettings = @{
-            // kCVPixelFormatType_32BGRA 'BGRA'
-            // kCVPixelFormatType_422YpCbCr8 '2yuv'
-            // kCVPixelFormatType_422YpCbCr8_yuvs 'yuvs'
-            // kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange '420v'
-            (id)kCVPixelBufferPixelFormatTypeKey : @(kCVPixelFormatType_32BGRA)
-        };
-    }
+    [session addInput:input];
+    auto output = [[AVCaptureVideoDataOutput alloc] init];
+    [output setSampleBufferDelegate:delegate //
+                              queue:dispatch_get_global_queue(
+                                        DISPATCH_QUEUE_PRIORITY_LOW, 0)];
+    [session addOutput:output];
+    output.videoSettings = @{
+        // kCVPixelFormatType_32BGRA 'BGRA'
+        // kCVPixelFormatType_422YpCbCr8 '2yuv'
+        // kCVPixelFormatType_422YpCbCr8_yuvs 'yuvs'
+        (id)kCVPixelBufferPixelFormatTypeKey : @(kCVPixelFormatType_422YpCbCr8),
+        (id)kCVPixelBufferMetalCompatibilityKey : @(YES),
+        (id)kCVPixelBufferOpenGLCompatibilityKey : @(YES),
+    };
     session.sessionPreset = AVCaptureSessionPreset1280x720;
     rect = NSMakeRect(0, 0, 1280, 720);
-onError:
     [session commitConfiguration];
-    return err;
+    return nil;
 }
 
-NSWindow* makeWindowForAVCaptureSession(AD* appd, NSString* title,
-                                        AVCaptureSession* session) {
-    if (acquireCameraPermission() == false) {
-        NSLog(@"Failed: %@", @"Camera permission");
-        return nil;
-    }
-    auto const device = acquireCameraDevice();
+NSWindow* makeWindowForAVCaptureDevice(AD* appd, NSString* title,
+                                       AVCaptureDevice* device) {
     if (device == nil) {
         NSLog(@"Failed: %@", @"AVCaptureDevice(Camera)");
         return nil;
     }
+    auto session = [[AVCaptureSession alloc] init];
     auto delegate = [[SBD alloc] init:device session:session];
-    auto frame = NSMakeRect(0, 0, 1280, 720);
+    auto frame = NSMakeRect(0, 0, 640, 480);
     if (auto err = configure(session, device, delegate, frame)) {
         NSLog(@"Failed: %@", [err description]);
         return nullptr;
@@ -160,6 +150,35 @@ NSWindow* makeWindowForAVCaptureSession(AD* appd, NSString* title,
     [view.layer addSublayer:layer];
 
     auto window = [appd makeWindow:delegate title:title contentView:view];
-    [delegate start];
+    NSLog(@"capture session: start running");
+    [session startRunning];
+    return window;
+}
+
+NSWindow* makeWindowForAVCaptureDevice(
+    AD* appd, NSString* title, AVCaptureDevice* device,
+    id<AVCaptureVideoDataOutputSampleBufferDelegate> delegate) {
+    if (device == nil) {
+        NSLog(@"Failed: %@", @"AVCaptureDevice(Camera)");
+        return nil;
+    }
+    auto session = [[AVCaptureSession alloc] init];
+    auto frame = NSMakeRect(0, 0, 640, 480);
+    if (auto err = configure(session, device, delegate, frame)) {
+        NSLog(@"Failed: %@", [err description]);
+        return nullptr;
+    }
+
+    auto view = [[NSView alloc] initWithFrame:frame];
+    view.wantsLayer = true;
+    auto layer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:session];
+    layer.frame = frame;
+    layer.videoGravity = AVLayerVideoGravityResizeAspectFill;
+    [view.layer addSublayer:layer];
+
+    auto windowd = [[SBD alloc] init:device session:session];
+    auto window = [appd makeWindow:windowd title:title contentView:view];
+    NSLog(@"capture session: start running");
+    [session startRunning];
     return window;
 }

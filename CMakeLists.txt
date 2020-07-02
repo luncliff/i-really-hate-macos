@@ -17,6 +17,8 @@ add_executable(damn_app
     camera.mm
     metal.mm
     opengl.mm
+    opengl_es.h
+    opengl_es.cpp
 )
 
 set_target_properties(damn_app
@@ -59,7 +61,7 @@ else()
     )
     target_link_libraries(damn_app
     PRIVATE
-        "-framework AppKit" "-framework OpenGL"
+        "-framework AppKit" "-framework OpenGL" # "-framework GLKit" 
     )
 endif()
 

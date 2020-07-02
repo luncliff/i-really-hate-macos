@@ -1,10 +1,10 @@
 #import "interface.h"
 
 #import <OpenGL/OpenGL.h> // _OPENGL_H
-// #import <OpenGL/gl3.h>    // __gl3_h_
-// #import <OpenGL/gl3ext.h> // __gl3ext_h_
-#import <OpenGL/gl.h>    // __gl_h_
-#import <OpenGL/glext.h> // __glext_h_
+#import <OpenGL/gl3.h>    // __gl3_h_
+#import <OpenGL/gl3ext.h> // __gl3ext_h_
+// #import <OpenGL/gl.h>    // __gl_h_
+// #import <OpenGL/glext.h> // __glext_h_
 
 /// @see https://stackoverflow.com/questions/25981553/cvdisplaylink-with-swift
 /// @see https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/OpenGL-MacProgGuide/
@@ -51,10 +51,10 @@ static CVReturn callback(CVDisplayLinkRef display, const CVTimeStamp* now,
     auto view = reinterpret_cast<GLV*>(ptr);
     auto context = [view openGLContext];
     [context makeCurrentContext];
-    [context lock];
+    // [context lock];
     if (auto ec = [view->_renderer render:context currentView:view])
         NSLog(@"gl error: %5u(%4x)", ec, ec);
-    [context unlock];
+    // [context unlock];
     return kCVReturnSuccess;
 }
 - (void)prepareOpenGL {
@@ -62,13 +62,26 @@ static CVReturn callback(CVDisplayLinkRef display, const CVTimeStamp* now,
     [super prepareOpenGL];
     // CGL configuration
     auto const context = [[self openGLContext] CGLContextObj];
-    CGLDisable(context, kCGLCEMPEngine);
+    if (auto ec = CGLEnable(context, kCGLCEMPEngine))
+        NSLog(@"Can't enable kCGLCEMPEngine: %u", ec);
     // OpenGL informations
     NSLog(@"GL_VERSION: %s", glGetString(GL_VERSION));
     NSLog(@"GL_RENDERER: %s", glGetString(GL_RENDERER));
     NSLog(@"GL_VENDOR: %s", glGetString(GL_VENDOR));
     NSLog(@"GL_SHADING_LANGUAGE_VERSION: %s",
           glGetString(GL_SHADING_LANGUAGE_VERSION));
+
+    GLint num_extensions = 0;
+    glGetIntegerv(GL_NUM_EXTENSIONS, &num_extensions);
+    NSLog(@"GL_EXTENSIONS: %d", num_extensions);
+    for (auto i = 0; i < num_extensions; ++i) {
+        NSLog(@" - %s", glGetStringi(GL_EXTENSIONS, i));
+        // requires
+        // - GL_ARB_ES2_compatibility
+        // - GL_ARB_texture_storage
+        // - GL_APPLE_rgb_422   https://www.khronos.org/registry/OpenGL/extensions/APPLE/APPLE_rgb_422.txt
+        // - GL_APPLE_ycbcr_422 https://www.khronos.org/registry/OpenGL/extensions/APPLE/APPLE_ycbcr_422.txt
+    }
     // the view will be refreshed with CVDisplay
     CVDisplayLinkCreateWithActiveCGDisplays(&display);
     CVDisplayLinkSetOutputCallback(display, &callback, self);
@@ -100,9 +113,10 @@ NSWindow* makeWindowForOpenGL(AD* appd, NSString* title) {
     return window;
 }
 NSWindow* makeWindowForOpenGL(AD* appd, NSString* title,
-                              id<OpenGLRenderer> renderer) {
+                              id<OpenGLRenderer> renderer,
+                              NSOpenGLContext* context) {
     const auto rect = NSMakeRect(0, 0, 720, 720);
-    auto view = [[GLV alloc] initWithFrame:rect sharedContext:nil];
+    auto view = [[GLV alloc] initWithFrame:rect sharedContext:context];
     view.renderer = renderer;
     auto window = [appd makeWindow:view title:title contentView:view];
     return window;

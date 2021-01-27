@@ -1,37 +1,41 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.18)
 project(hate_this LANGUAGES CXX OBJCXX)
-
 if(NOT APPLE)
     message(FATAL_ERROR "expect APPLE platform")
 endif()
 message(STATUS "using Apple: ${CMAKE_OSX_SYSROOT}")
-
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
     message(FATAL_ERROR "requires CMAKE_INSTALL_PREFIX")
 endif()
 
 add_executable(damn_app
-    main.mm
-    interface.h
-    native.cpp
-    camera.mm
-    metal.mm
-    opengl.mm
-    opengl_es.h
-    opengl_es.cpp
+    interface.h main.mm native.cpp
+    camera.mm metal.mm
 )
 
 set_target_properties(damn_app
 PROPERTIES
+    CXX_STANDARD 17
     OBJCXX_STANDARD 17
     MACOSX_BUNDLE   true
     # XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "-"
+    XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "dev.luncliff.damn-app"
 )
 
 target_include_directories(damn_app
 PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_INSTALL_PREFIX}/include
+)
+
+target_compile_definitions(damn_app
+PRIVATE
+    GL_SILENCE_DEPRECATION
+)
+
+target_compile_options(damn_app
+PRIVATE
+    -std=c++2a -stdlib=libc++ -Wall -Wextra
 )
 
 target_link_directories(damn_app
@@ -45,7 +49,7 @@ PRIVATE
     "-framework CoreMedia" "-framework CoreVideo" "-framework AVFoundation"
     "-framework MetalKit" "-framework Metal"
 )
-if(CMAKE_SYSTEM MATCHES iOS)
+if(IOS)
     set_target_properties(damn_app
     PROPERTIES
         MACOSX_BUNDLE_INFO_PLIST    ${CMAKE_CURRENT_SOURCE_DIR}/Info-iphone.plist
@@ -61,23 +65,11 @@ else()
     )
     target_link_libraries(damn_app
     PRIVATE
-        "-framework AppKit" "-framework OpenGL" # "-framework GLKit" 
+        "-framework AppKit"
     )
 endif()
 
-target_compile_options(damn_app
-PRIVATE
-    -Wall -Wextra
-    -std=c++2a -stdlib=libc++
-)
-
-target_compile_definitions(damn_app
-PRIVATE
-    GL_SILENCE_DEPRECATION
-)
-
-include(BundleUtilities)
-
+# include(BundleUtilities)
 install(TARGETS damn_app
         BUNDLE DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
@@ -100,8 +92,7 @@ FILES
 )
 
 # xctest_add_bundle
-xctest_add_bundle(test_suite
-    damn_app
+xctest_add_bundle(test_suite damn_app
     Info.plist
     ${src}
 )

@@ -3,7 +3,7 @@
 <plist version="1.0">
     <dict>
         <key>LSMinimumSystemVersion</key>
-        <string>10.14</string>
+        <string>10.15</string>
         <!-- bundle info -->
         <key>CFBundleDevelopmentRegion</key>
         <string>ko_KR</string>

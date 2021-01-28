@@ -2,11 +2,12 @@
 #if defined(__OBJC__)
 #import <AVFoundation/AVFoundation.h>
 #import <MetalKit/MetalKit.h>
-#if defined(TARGET_OS_MAC)
-#import <AppKit/AppKit.h>
+#if TARGET_OS_IOS
+#import <UIKit/UIKit.h>
+
+
 #else
-#error "currently TARGET_OS_MAC only"
-#endif
+#import <AppKit/AppKit.h>
 @interface SBD : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate, //
                            NSWindowDelegate>
 @property(readonly) AVCaptureSession *session;
@@ -20,9 +21,10 @@
 @end
 
 NSWindow *makeWindowForMtkView(AD *appd, NSString *title);
+NSWindow *makeWindowForAVCaptureDevice(AD *appd, NSString *title, AVCaptureDevice *device, SBD *windowd);
+#endif
 
 AVCaptureDevice *acquireCameraDevice();
 bool acquireCameraPermission();
-NSWindow *makeWindowForAVCaptureDevice(AD *appd, NSString *title, AVCaptureDevice *device, SBD *windowd);
 
 #endif

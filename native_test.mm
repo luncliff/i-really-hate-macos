@@ -1,4 +1,5 @@
 #import <XCTest/XCTest.h>
+#import "interface.h"
 
 @interface TestCase1 : XCTestCase
 @end

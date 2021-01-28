@@ -36,7 +36,7 @@ AVCaptureDevice *acquireCameraDevice() {
     case AVCaptureDevicePositionBack:
     case AVCaptureDevicePositionFront:
     case AVCaptureDevicePositionUnspecified:
-      NSLog(@"position: %ld", pos);
+      NSLog(@"position: %d", static_cast<int>(pos));
     }
     for (AVCaptureDeviceFormat *fmt : [camera formats]) {
       NSLog(@"format: %@", fmt);
@@ -47,7 +47,7 @@ AVCaptureDevice *acquireCameraDevice() {
 }
 
 NSError *configure(AVCaptureSession *session, AVCaptureDevice *device,
-                   id<AVCaptureVideoDataOutputSampleBufferDelegate> delegate, NSRect &rect) {
+                   id<AVCaptureVideoDataOutputSampleBufferDelegate> delegate, Rect &rect) {
   NSError *err{};
   auto input = [[AVCaptureDeviceInput alloc] initWithDevice:device error:&err];
   if (err)
@@ -67,11 +67,16 @@ NSError *configure(AVCaptureSession *session, AVCaptureDevice *device,
     (id)kCVPixelBufferOpenGLCompatibilityKey : @(YES),
   };
   session.sessionPreset = AVCaptureSessionPreset1280x720;
-  rect = NSMakeRect(0, 0, 1280, 720);
+  rect.left = rect.top = 0;
+  rect.right = 1280;
+  rect.bottom = 720;
   [session commitConfiguration];
   return nil;
 }
 
+#if TARGET_OS_IOS
+
+#else
 NSWindow *makeWindowForAVCaptureDevice(AD *appd, NSString *title, AVCaptureDevice *device, SBD *windowd) {
   if (device == nil) {
     NSLog(@"Failed: %@", @"AVCaptureDevice(Camera)");
@@ -141,3 +146,4 @@ NSWindow *makeWindowForAVCaptureDevice(AD *appd, NSString *title, AVCaptureDevic
   [_session stopRunning];
 }
 @end
+#endif

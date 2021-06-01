@@ -1,6 +1,6 @@
-#import "interface.h"
+#import "pch.h"
 
-bool acquireCameraPermission() {
+bool acquireCameraPermission() noexcept {
     const auto mtype = AVMediaTypeVideo;
     switch ([AVCaptureDevice authorizationStatusForMediaType:mtype]) {
     case AVAuthorizationStatusAuthorized:
@@ -26,78 +26,25 @@ bool acquireCameraPermission() {
 }
 
 /// @todo https://developer.apple.com/documentation/avfoundation/avcapturedevicediscoverysession/2361539-discoverysessionwithdevicetypes?language=objc
-AVCaptureDevice* acquireCameraDevice() {
+AVCaptureDevice* acquireCameraDevice() noexcept {
     for (AVCaptureDevice* camera in
          [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo]) {
         const auto name = [camera localizedName];
         NSLog(@"camera: %@", name);
         switch (const auto pos = [camera position]) {
         case AVCaptureDevicePositionBack:
+            NSLog(@"position: %@", @"Back");
         case AVCaptureDevicePositionFront:
+            NSLog(@"position: %@", @"Front");
         case AVCaptureDevicePositionUnspecified:
-            NSLog(@"position: %@", pos);
+            NSLog(@"position: %@", @"Unspecified");
         }
-        for (auto fmt : [camera formats])
+        for (id fmt : [camera formats])
             NSLog(@"format: %@", fmt);
-
         return camera;
     }
     return nullptr;
 }
-
-@interface SBD : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate, //
-                           NSWindowDelegate>
-@property(readonly) AVCaptureSession* session;
-@end
-@implementation SBD
-- (id)init:(AVCaptureDevice*)device session:(AVCaptureSession*)session {
-    if (self = [super init]) {
-        _session = session;
-    }
-    return self;
-}
-
-- (void)consume:(CVPixelBufferRef)pb {
-    const size_t bpr = CVPixelBufferGetBytesPerRow(pb);
-    const size_t width = CVPixelBufferGetWidth(pb);
-    const size_t height = CVPixelBufferGetHeight(pb);
-    const size_t data_size = CVPixelBufferGetDataSize(pb);
-    // CVPixelBufferLockBaseAddress(pb, 0);
-    // const void* ptr = CVPixelBufferGetBaseAddress(pb);
-    // CVPixelBufferUnlockBaseAddress(pb, 0);
-    const auto format = CVPixelBufferGetPixelFormatType(pb);
-    switch (format) {
-    case kCVPixelFormatType_422YpCbCr8: // '2yuv'
-        break;
-    case kCVPixelFormatType_422YpCbCr8_yuvs: // 'yuvs'
-        break;
-    case kCVPixelFormatType_32BGRA: // 'BGRA'
-        break;
-    default:
-        break;
-    }
-}
-- (void)captureOutput:(AVCaptureOutput*)output
-    didOutputSampleBuffer:(CMSampleBufferRef)buffer
-           fromConnection:(AVCaptureConnection*)connection {
-    CVPixelBufferRef pb = CMSampleBufferGetImageBuffer(buffer);
-    CVPixelBufferRetain(pb);
-    [self consume:pb];
-    CVPixelBufferRelease(pb);
-}
-- (void)captureOutput:(AVCaptureOutput*)output
-    didDropSampleBuffer:(CMSampleBufferRef)buffer
-         fromConnection:(AVCaptureConnection*)connection {
-    NSLog(@"buffer delegate: %s", "drop");
-}
-- (void)windowWillClose:(NSNotification*)notification {
-    NSWindow* window = notification.object;
-    NSLog(@"window close: %@", window.title);
-    // stop the session so no more `captureOutput` occurs
-    NSLog(@"capture session: stop running");
-    [_session stopRunning];
-}
-@end
 
 NSError* configure(AVCaptureSession* session, AVCaptureDevice* device,
                    id<AVCaptureVideoDataOutputSampleBufferDelegate> delegate,
@@ -128,57 +75,23 @@ NSError* configure(AVCaptureSession* session, AVCaptureDevice* device,
     return nil;
 }
 
-NSWindow* makeWindowForAVCaptureDevice(AD* appd, NSString* title,
-                                       AVCaptureDevice* device) {
-    if (device == nil) {
-        NSLog(@"Failed: %@", @"AVCaptureDevice(Camera)");
-        return nil;
-    }
-    auto session = [[AVCaptureSession alloc] init];
-    auto delegate = [[SBD alloc] init:device session:session];
-    auto frame = NSMakeRect(0, 0, 640, 480);
-    if (auto err = configure(session, device, delegate, frame)) {
-        NSLog(@"Failed: %@", [err description]);
-        return nullptr;
-    }
-
-    auto view = [[NSView alloc] initWithFrame:frame];
-    view.wantsLayer = true;
-    auto layer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:session];
-    layer.frame = frame;
-    layer.videoGravity = AVLayerVideoGravityResizeAspectFill;
-    [view.layer addSublayer:layer];
-
-    auto window = [appd makeWindow:delegate title:title contentView:view];
-    NSLog(@"capture session: start running");
-    [session startRunning];
-    return window;
-}
-
-NSWindow* makeWindowForAVCaptureDevice(
-    AD* appd, NSString* title, AVCaptureDevice* device,
+NSError* makeWindowForAVCaptureDevice(
+    NSWindow** pwindow, NSString* title, AVCaptureSession** psession,
+    AVCaptureDevice* device,
     id<AVCaptureVideoDataOutputSampleBufferDelegate> delegate) {
-    if (device == nil) {
-        NSLog(@"Failed: %@", @"AVCaptureDevice(Camera)");
-        return nil;
-    }
     auto session = [[AVCaptureSession alloc] init];
+    *psession = session;
     auto frame = NSMakeRect(0, 0, 640, 480);
     if (auto err = configure(session, device, delegate, frame)) {
         NSLog(@"Failed: %@", [err description]);
-        return nullptr;
+        return err;
     }
-
     auto view = [[NSView alloc] initWithFrame:frame];
     view.wantsLayer = true;
     auto layer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:session];
     layer.frame = frame;
     layer.videoGravity = AVLayerVideoGravityResizeAspectFill;
     [view.layer addSublayer:layer];
-
-    auto windowd = [[SBD alloc] init:device session:session];
-    auto window = [appd makeWindow:windowd title:title contentView:view];
-    NSLog(@"capture session: start running");
-    [session startRunning];
-    return window;
+    *pwindow = makeWindow(nil, title, view);
+    return nil;
 }

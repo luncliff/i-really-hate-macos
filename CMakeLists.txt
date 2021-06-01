@@ -10,15 +10,11 @@ if(NOT DEFINED CMAKE_INSTALL_PREFIX)
     message(FATAL_ERROR "requires CMAKE_INSTALL_PREFIX")
 endif()
 
+set(CMAKE_XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY L6WT8W228B)
+
 add_executable(damn_app
-    main.mm
-    interface.h
-    native.cpp
-    camera.mm
-    metal.mm
-    opengl.mm
-    opengl_es.h
-    opengl_es.cpp
+    main.mm camera.mm
+    # metal.mm
 )
 
 set_target_properties(damn_app
@@ -72,7 +68,7 @@ PRIVATE
 )
 
 target_compile_definitions(damn_app
-PRIVATE
+PUBLIC
     GL_SILENCE_DEPRECATION
 )
 
@@ -100,8 +96,7 @@ FILES
 )
 
 # xctest_add_bundle
-xctest_add_bundle(test_suite
-    damn_app
+xctest_add_bundle(test_suite damn_app
     Info.plist
     ${src}
 )
@@ -135,3 +130,5 @@ PRIVATE
     -Wall -Wextra
     -std=c++2a -stdlib=libc++
 )
+
+xctest_add_test(damn_app test_suite)
